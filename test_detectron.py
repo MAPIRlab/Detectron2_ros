@@ -4,9 +4,12 @@ import detectron2.model_zoo
 import detectron2.engine
 import cv2
 
+
+## Minimal example, just to check that detectron is propely installed in your system and added to the PYTHONPATH
+
 def __main__():
 
-	MODEL_FILE="COCO-PanopticSegmentation/panoptic_fpn_R_50_1x.yaml"
+	MODEL_FILE="COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"
 
 	cfg = detectron2.config.get_cfg()
 	cfg.merge_from_file(detectron2.model_zoo.get_config_file(MODEL_FILE))
@@ -14,7 +17,7 @@ def __main__():
 	cfg.MODEL.WEIGHTS = detectron2.model_zoo.get_checkpoint_url(MODEL_FILE)
 	predictor = detectron2.engine.DefaultPredictor(cfg)
 
-	im = cv2.imread("src/Untitled.png")
+	im = cv2.imread("detectron_ros/resources/Untitled.png")
 	outputs = predictor(im)
 	print(outputs)
 

@@ -12,7 +12,9 @@ class TestDetectron(rclpy.node.Node):
         self.client = self.create_client(detectron_msgs.srv.SegmentImage, "/detectron/segment")
 
     def sendRequest(self):
-        
+        while not self.client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+            
         image_cv = cv2.imread(os.path.join(ament_index_python.get_package_share_directory("detectron_ros"), "resources", "Untitled.png") )
         image_msg = CvBridge().cv2_to_imgmsg(image_cv)
         request = detectron_msgs.srv.SegmentImage.Request()
