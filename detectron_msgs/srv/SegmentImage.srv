@@ -1,4 +1,6 @@
-std_msgs/Header header
+sensor_msgs/Image image
+
+---
 
 # Bounding boxes in pixels
 sensor_msgs/RegionOfInterest[] boxes
