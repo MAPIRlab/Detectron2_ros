@@ -10,6 +10,7 @@ import detectron2.utils
 import detectron2.engine
 from detectron2.utils.visualizer import Visualizer
 from detectron_msgs.srv import SegmentImage
+from detectron_msgs.msg import SemanticInstance
 
 import numpy as np
 import torch
@@ -68,23 +69,29 @@ class Detectron_ros (rclpy.node.Node):
             return response
         
         boxes = results.pred_boxes if results.has("pred_boxes") else []
+        scores = results.scores
         
-        response.class_ids = results.pred_classes.tolist() if results.has("pred_classes") else []
+        #This field requires a modified version of detectron2. The official version does not output the scores of "losing" classes 
+        scores_all_classes = self.normalize( results.all_scores[:, self.interest_classes] ) if results.has("all_scores") else np.zeros((len(boxes),1), float)
+
         response.class_names = self._class_names.tolist()
-        response.scores =  torch.flatten( self.normalize( results.all_scores[:, self.interest_classes] )  ).tolist() if results.has("all_scores") else []
         
         for i, (x1, y1, x2, y2) in enumerate(boxes):
+            response.instances.append(SemanticInstance())
+            response.instances[i].class_id = int(results.pred_classes[i])
+            response.instances[i].score = float(scores[i])
+            response.instances[i].scores_all_classes = scores_all_classes[i,:].tolist()
+        
             mask = np.zeros(masks[i].shape, dtype="uint8")
             mask[masks[i, :, :]]=255
-            mask = self.cv_bridge.cv2_to_imgmsg(mask)
-            response.masks.append(mask)
+            response.instances[i].mask = self.cv_bridge.cv2_to_imgmsg(mask)
 
             box = sensor_msgs.msg.RegionOfInterest()
             box.x_offset = int(np.uint32(x1))
             box.y_offset = int(np.uint32(y1))
             box.height = int(np.uint32(y2 - y1))
             box.width = int(np.uint32(x2 - x1))
-            response.boxes.append(box)
+            response.instances[i].box =box
         
         if self.publish_visualization:
             visualizer = Visualizer(np_image[:, :, ::-1], detectron2.data.MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1.2)
@@ -100,31 +107,6 @@ class Detectron_ros (rclpy.node.Node):
         for i in range( list(scores.shape)[0] ):
             scores[i] /= sum(scores[i])
         return scores
-
-    def convert_to_cv_image(self, image_msg):
-        self._width = image_msg.width
-        self._height = image_msg.height
-        channels = int(len(image_msg.data) / (self._width * self._height))
-
-        encoding = None
-        if image_msg.encoding.lower() in ['rgb8', 'bgr8']:
-            encoding = np.uint8
-        elif image_msg.encoding.lower() == 'mono8':
-            encoding = np.uint8
-        elif image_msg.encoding.lower() == '32fc1':
-            encoding = np.float32
-            channels = 1
-
-        cv_img = np.ndarray(shape=(image_msg.height, image_msg.width, channels),
-                            dtype=encoding, buffer=image_msg.data)
-
-        if image_msg.encoding.lower() == 'mono8':
-            cv_img = cv2.cvtColor(cv_img, cv2.COLOR_RGB2GRAY)
-        else:
-            cv_img = cv2.cvtColor(cv_img, cv2.COLOR_RGB2BGR)
-
-        return cv_img
-    
 
 def main(args=None):
     rclpy.init(args=args)

@@ -10,6 +10,7 @@ find_package(sensor_msgs REQUIRED)
 # services and actions
 find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
+	msg/SemanticInstance.msg
 	srv/SegmentImage.srv
     DEPENDENCIES std_msgs sensor_msgs
 )
