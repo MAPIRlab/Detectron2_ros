@@ -1,0 +1,5 @@
+sensor_msgs/Image image
+
+---
+
+segmentation_msgs/SemanticInstance2D[] instances

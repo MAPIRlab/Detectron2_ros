@@ -9,13 +9,12 @@ import detectron2.model_zoo
 import detectron2.utils
 import detectron2.engine
 from detectron2.utils.visualizer import Visualizer
-from detectron_msgs.srv import SegmentImage
-from detectron_msgs.msg import SemanticInstance
+from segmentation_msgs.srv import SegmentImage
+from segmentation_msgs.msg import SemanticInstance2D
+from segmentation_msgs.msg import Classification
 
 import numpy as np
-import torch
 from cv_bridge import CvBridge
-import cv2
 
 '''
 Params:
@@ -55,8 +54,9 @@ class Detectron_ros (rclpy.node.Node):
         self.predictor = detectron2.engine.DefaultPredictor(self.cfg)
 
         self._class_names = np.array( detectron2.data.MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]).get("thing_classes", None) )
-        self._class_names = self._class_names[self.interest_classes]
-        self._logger.info(f"Classes of interest: {self._class_names}")
+        
+        interest_class_names = self._class_names[self.interest_classes]
+        self._logger.info(f"Classes of interest: {interest_class_names}")
 
     def segment_image(self, request, response):
         np_image = self.cv_bridge.imgmsg_to_cv2(request.image) #self.convert_to_cv_image(request.image)
@@ -72,15 +72,19 @@ class Detectron_ros (rclpy.node.Node):
         scores = results.scores
         
         #This field requires a modified version of detectron2. The official version does not output the scores of "losing" classes 
-        scores_all_classes = self.normalize( results.all_scores[:, self.interest_classes] ) if results.has("all_scores") else np.zeros((len(boxes),1), float)
+        scores_all_classes = self.normalize( results.all_scores[:, self.interest_classes] ) if results.has("all_scores") else None
 
-        response.class_names = self._class_names.tolist()
         
         for i, (x1, y1, x2, y2) in enumerate(boxes):
-            response.instances.append(SemanticInstance())
-            response.instances[i].class_id = int(results.pred_classes[i])
-            response.instances[i].score = float(scores[i])
-            response.instances[i].scores_all_classes = scores_all_classes[i,:].tolist()
+            response.instances.append(SemanticInstance2D())
+            if scores_all_classes is not None:
+                response.instances[i].classifications.extend(self.make_all_classifications(scores_all_classes[i,:]))
+            else:
+                response.instances[i].classifications.append(self.make_classification(
+                        self._class_names[results.pred_classes[i]], 
+                        float(scores[i])
+                    ))
+
         
             mask = np.zeros(masks[i].shape, dtype="uint8")
             mask[masks[i, :, :]]=255
@@ -91,7 +95,7 @@ class Detectron_ros (rclpy.node.Node):
             box.y_offset = int(np.uint32(y1))
             box.height = int(np.uint32(y2 - y1))
             box.width = int(np.uint32(x2 - x1))
-            response.instances[i].box =box
+            response.instances[i].box = box
         
         if self.publish_visualization:
             visualizer = Visualizer(np_image[:, :, ::-1], detectron2.data.MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1.2)
@@ -107,6 +111,23 @@ class Detectron_ros (rclpy.node.Node):
         for i in range( list(scores.shape)[0] ):
             scores[i] /= sum(scores[i])
         return scores
+    
+    def make_classification(self, class_name, score):
+        c = Classification()
+        c.class_name = class_name
+        c.score = score
+        return c
+    
+    def make_all_classifications(self, scores):
+        classifications = []
+        for i in range(scores):
+            class_id = self.interest_classes[i]
+            class_name = self._class_names[class_id]
+            c = Classification()
+            c.class_name = class_name
+            c.score = scores[i]
+            classifications.append(c)
+        return classifications
 
 def main(args=None):
     rclpy.init(args=args)
