@@ -16,6 +16,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 	srv/SegmentImage.srv
 
 	msg/ObjectWithBoundingBox3D.msg
+	msg/ObjectWithBoundingBox3DArray.msg
 
     DEPENDENCIES std_msgs sensor_msgs
 )
