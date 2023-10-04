@@ -11,27 +11,27 @@ using ObjectWithBoundingBox3DArray = segmentation_msgs::msg::ObjectWithBoundingB
 
 struct CameraCalibration
 {
-	float centerX, centerY;
-	float focalX, focalY;
-	float depthLimit;
+    float centerX, centerY;
+    float focalX, focalY;
+    float depthLimit;
 };
 
 class ProjectTo3D : public rclcpp::Node
 {
 public:
-	ProjectTo3D();
+    ProjectTo3D();
 
-	void processImage();
+    void processImage();
 
 private:
-	void projectInstancesAndPublish(segmentation_msgs::srv::SegmentImage::Response::SharedPtr response, const cv::Mat& depth,
-									std_msgs::msg::Header image_header);
+    void projectInstancesAndPublish(segmentation_msgs::srv::SegmentImage::Response::SharedPtr response, const cv::Mat& depth,
+                                    std_msgs::msg::Header image_header);
 
-	CameraCalibration m_cameraCalibration;
+    CameraCalibration m_cameraCalibration;
 
-	Image::SharedPtr m_lastImage;
-	rclcpp::Subscription<Image>::SharedPtr m_cameraSub;
-	rclcpp::Client<segmentation_msgs::srv::SegmentImage>::SharedPtr m_detectronClient;
-	rclcpp::Publisher<ObjectWithBoundingBox3DArray>::SharedPtr m_pub3D;
-	BufferWrapper m_tfBuffer;
+    Image::SharedPtr m_lastImage;
+    rclcpp::Subscription<Image>::SharedPtr m_cameraSub;
+    rclcpp::Client<segmentation_msgs::srv::SegmentImage>::SharedPtr m_detectronClient;
+    rclcpp::Publisher<ObjectWithBoundingBox3DArray>::SharedPtr m_pub3D;
+    BufferWrapper m_tfBuffer;
 };
