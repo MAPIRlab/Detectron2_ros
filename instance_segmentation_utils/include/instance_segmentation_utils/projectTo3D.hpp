@@ -3,9 +3,9 @@
 #include <rclcpp/rclcpp.hpp>
 #include <segmentation_msgs/msg/object_with_bounding_box3_d_array.hpp>
 #include <segmentation_msgs/srv/segment_image.hpp>
-#include <sensor_msgs/msg/image.hpp>
+#include <sensor_msgs/msg/compressed_image.hpp>
 
-using Image = sensor_msgs::msg::Image;
+using Image = sensor_msgs::msg::CompressedImage;
 using ObjectWithBoundingBox3D = segmentation_msgs::msg::ObjectWithBoundingBox3D;
 using ObjectWithBoundingBox3DArray = segmentation_msgs::msg::ObjectWithBoundingBox3DArray;
 

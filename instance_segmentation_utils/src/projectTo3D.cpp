@@ -47,12 +47,11 @@ void ProjectTo3D::processImage()
     if (!m_lastImage)
         return;
 
-    cv::Mat rgb;
-    cv::Mat depth;
+    cv::Mat rgb, depth;
     // split the image into rgb and d
     {
         cv::Mat channels[4];
-        cv_bridge::CvImagePtr receivedImageCV = cv_bridge::toCvCopy(*m_lastImage, m_lastImage->encoding);
+        cv_bridge::CvImagePtr receivedImageCV = cv_bridge::toCvCopy(*m_lastImage);
         cv::split(receivedImageCV->image, channels);
 
         cv::merge(channels, 3, rgb);
@@ -62,7 +61,7 @@ void ProjectTo3D::processImage()
     // send the rgb image to detectron
     auto request = std::make_shared<segmentation_msgs::srv::SegmentImage::Request>();
     cv_bridge::CvImage(m_lastImage->header, "rgb8", rgb).toImageMsg(request->image);
-    auto header = m_lastImage->header;
+    std_msgs::msg::Header header = m_lastImage->header;
     m_lastImage = nullptr;
 
     auto future = m_detectronClient->async_send_request(request);
@@ -99,7 +98,7 @@ void ProjectTo3D::projectInstancesAndPublish(segmentation_msgs::srv::SegmentImag
     for (const segmentation_msgs::msg::SemanticInstance2D& instance : response->instances)
     {
         objectsArray.objects.emplace_back();
-        auto& objectBB = objectsArray.objects.back();
+        segmentation_msgs::msg::ObjectWithBoundingBox3D& objectBB = objectsArray.objects.back();
 
         objectBB.classifications = instance.classifications;
 
@@ -128,20 +127,20 @@ void ProjectTo3D::projectInstancesAndPublish(segmentation_msgs::srv::SegmentImag
         cv::minMaxIdx(y_coord, &y_min, &y_max, nullptr, nullptr, mask->image);
         cv::minMaxIdx(z_coord, &z_min, &z_max, nullptr, nullptr, mask->image);
 
-        geometry_msgs::msg::TransformStamped transform =
+        geometry_msgs::msg::TransformStamped cameraToMap =
             m_tfBuffer.buffer.lookupTransform(image_header.frame_id, "map", tf2_ros::fromMsg(image_header.stamp));
 
         objectBB.size.x = x_max - x_min;
         objectBB.size.y = y_max - y_min;
         objectBB.size.z = z_max - z_min; // originally, this was the stdDev of the z values in the mask
-        tf2::doTransform(objectBB.size, objectBB.size, transform);
+        tf2::doTransform(objectBB.size, objectBB.size, cameraToMap);
 
         objectBB.center.header.frame_id = "map";
         objectBB.center.header.stamp = image_header.stamp;
         objectBB.center.point.x = x_min + objectBB.size.x * 0.5;
         objectBB.center.point.y = y_min + objectBB.size.y * 0.5;
         objectBB.center.point.z = z_min + objectBB.size.z * 0.5;
-        tf2::doTransform(objectBB.center, objectBB.center, transform);
+        tf2::doTransform(objectBB.center, objectBB.center, cameraToMap);
     }
 
     m_pub3D->publish(objectsArray);
