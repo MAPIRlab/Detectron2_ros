@@ -59,8 +59,8 @@ class Detectron_ros (rclpy.node.Node):
         self._logger.info(f"Classes of interest: {interest_class_names}")
 
     def segment_image(self, request, response):
-        np_image = self.cv_bridge.imgmsg_to_cv2(request.image) #self.convert_to_cv_image(request.image)
-        outputs = self.predictor( np_image )
+        numpy_image = self.cv_bridge.imgmsg_to_cv2(request.image)
+        outputs = self.predictor( numpy_image )
         results = outputs["instances"].to("cpu")
 
         if results.has("pred_masks"):
@@ -74,7 +74,9 @@ class Detectron_ros (rclpy.node.Node):
         #This field requires a modified version of detectron2. The official version does not output the scores of "losing" classes 
         scores_all_classes = self.normalize( results.all_scores[:, self.interest_classes] ) if results.has("all_scores") else None
 
-        
+        # Populate the service response
+		# it has a list of instances, and for each instance a box, a mask, and a list of classifications (class, score)
+		# With the normal version of detectron, the list of classifications only has 1 element per instance, as detectron only outputs the score of the winning class
         for i, (x1, y1, x2, y2) in enumerate(boxes):
             response.instances.append(SemanticInstance2D())
             if scores_all_classes is not None:
@@ -98,7 +100,7 @@ class Detectron_ros (rclpy.node.Node):
             response.instances[i].box = box
         
         if self.publish_visualization:
-            visualizer = Visualizer(np_image[:, :, ::-1], detectron2.data.MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1.2)
+            visualizer = Visualizer(numpy_image[:, :, ::-1], detectron2.data.MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1.2)
             visualizer = visualizer.draw_instance_predictions(results)
             img = visualizer.get_image()[:, :, ::-1]
 
