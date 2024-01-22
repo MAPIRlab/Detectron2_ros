@@ -59,8 +59,8 @@ class Detectron_ros (rclpy.node.Node):
         self._logger.info(f"Classes of interest: {interest_class_names}")
 
     def segment_image(self, request, response):
-        np_image = self.cv_bridge.imgmsg_to_cv2(request.image) #self.convert_to_cv_image(request.image)
-        outputs = self.predictor( np_image )
+        numpy_image = self.cv_bridge.imgmsg_to_cv2(request.image)
+        outputs = self.predictor( numpy_image )
         results = outputs["instances"].to("cpu")
 
         if results.has("pred_masks"):
@@ -92,7 +92,7 @@ class Detectron_ros (rclpy.node.Node):
             response.instances.append(semantic_instance)
 
         if self.publish_visualization:
-            visualizer = Visualizer(np_image[:, :, ::-1], detectron2.data.MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1.2)
+            visualizer = Visualizer(numpy_image[:, :, ::-1], detectron2.data.MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1.2)
             visualizer = visualizer.draw_instance_predictions(results)
             img = visualizer.get_image()[:, :, ::-1]
 
