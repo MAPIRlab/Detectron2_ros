@@ -143,23 +143,6 @@ class Detectron_ros (rclpy.node.Node):
 
         return detection
 
-    def make_classification(self, class_name, score):
-        c = Classification()
-        c.class_name = class_name
-        c.score = score
-        return c
-    
-    def make_all_classifications(self, scores):
-        classifications = []
-        for i in range(scores):
-            class_id = self.interest_classes[i]
-            class_name = self._class_names[class_id]
-            c = Classification()
-            c.class_name = class_name
-            c.score = scores[i]
-            classifications.append(c)
-        return classifications
-
 def main(args=None):
     rclpy.init(args=args)
     node = Detectron_ros()
