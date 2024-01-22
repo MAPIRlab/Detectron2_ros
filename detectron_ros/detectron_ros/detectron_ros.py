@@ -11,7 +11,7 @@ import detectron2.engine
 from detectron2.utils.visualizer import Visualizer
 from segmentation_msgs.srv import SegmentImage
 from segmentation_msgs.msg import SemanticInstance2D
-from segmentation_msgs.msg import Classification
+from vision_msgs.msg import Detection2D, BoundingBox2D, ObjectHypothesisWithPose
 
 import numpy as np
 from cv_bridge import CvBridge
@@ -75,28 +75,22 @@ class Detectron_ros (rclpy.node.Node):
         scores_all_classes = self.normalize( results.all_scores[:, self.interest_classes] ) if results.has("all_scores") else None
 
         
-        for i, (x1, y1, x2, y2) in enumerate(boxes):
-            response.instances.append(SemanticInstance2D())
-            if scores_all_classes is not None:
-                response.instances[i].classifications.extend(self.make_all_classifications(scores_all_classes[i,:]))
-            else:
-                response.instances[i].classifications.append(self.make_classification(
-                        self._class_names[results.pred_classes[i]], 
-                        float(scores[i])
-                    ))
+        for i, bbox in enumerate(boxes):
 
-        
+            semantic_instance = SemanticInstance2D()
+
             mask = np.zeros(masks[i].shape, dtype="uint8")
-            mask[masks[i, :, :]]=255
-            response.instances[i].mask = self.cv_bridge.cv2_to_imgmsg(mask)
+            mask[masks[i, :, :]] = 255
 
-            box = sensor_msgs.msg.RegionOfInterest()
-            box.x_offset = int(np.uint32(x1))
-            box.y_offset = int(np.uint32(y1))
-            box.height = int(np.uint32(y2 - y1))
-            box.width = int(np.uint32(x2 - x1))
-            response.instances[i].box = box
-        
+            semantic_instance.mask = self.cv_bridge.cv2_to_imgmsg(mask)
+
+            if scores_all_classes is not None:
+                semantic_instance.detection = self.set_multiclass_detection(scores_all_classes[i,:], bbox)
+            else:
+                semantic_instance.detection = self.set_singleclass_detection(self._class_names[results.pred_classes[i]], float(scores[i]), bbox)
+
+            response.instances.append(semantic_instance)
+
         if self.publish_visualization:
             visualizer = Visualizer(np_image[:, :, ::-1], detectron2.data.MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]), scale=1.2)
             visualizer = visualizer.draw_instance_predictions(results)
@@ -111,7 +105,44 @@ class Detectron_ros (rclpy.node.Node):
         for i in range( list(scores.shape)[0] ):
             scores[i] /= sum(scores[i])
         return scores
-    
+
+    def set_singleclass_detection(self, class_name, score, bbox):
+
+        detection = Detection2D()
+        detection.bbox = BoundingBox2D()
+        detection.bbox.center.position.x = float(bbox[0]) 
+        detection.bbox.center.position.y = float(bbox[1])
+        detection.bbox.size_x = float(bbox[2] - bbox[0])
+        detection.bbox.size_y = float(bbox[3] - bbox[1])
+        detection.results = []
+        hypothesis = ObjectHypothesisWithPose()
+        hypothesis.hypothesis.class_id = class_name
+        hypothesis.hypothesis.score = score
+
+        detection.results.append(hypothesis)
+
+        return detection
+
+    def set_multiclass_detection(self, scores, bbox):
+
+        detection = Detection2D()
+        detection.bbox = BoundingBox2D()
+        detection.bbox.center.position.x = float(bbox[0]) 
+        detection.bbox.center.position.y = float(bbox[1])
+        detection.bbox.size_x = float(bbox[2] - bbox[0])
+        detection.bbox.size_y = float(bbox[3] - bbox[1])
+        detection.results = []
+
+        for i in range(scores):
+
+            hypothesis = ObjectHypothesisWithPose()
+            hypothesis.hypothesis.class_id = self._class_names[self.interest_classes[i]]
+            hypothesis.hypothesis.score = scores[i]
+
+            detection.results.append(hypothesis)
+
+        return detection
+
     def make_classification(self, class_name, score):
         c = Classification()
         c.class_name = class_name

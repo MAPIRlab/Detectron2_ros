@@ -1,1 +1,0 @@
-segmentation_msgs/ObjectWithBoundingBox3D[] objects
