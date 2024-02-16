@@ -9,3 +9,6 @@ vision_msgs/Detection2D[] instances
 
 # Object categories from the object detector
 string[] categories
+
+# Sensor pose
+geometry_msgs/PoseWithCovariance pose
