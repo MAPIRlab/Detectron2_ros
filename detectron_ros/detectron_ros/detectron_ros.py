@@ -1,3 +1,4 @@
+import time
 import rclpy
 import rclpy.node
 import sensor_msgs.msg
@@ -60,6 +61,7 @@ class Detectron_ros (rclpy.node.Node):
 
     def segment_image(self, request, response):
         #self._logger.info("Received an image")
+        start_time = time.time()
 
         numpy_image = self.cv_bridge.imgmsg_to_cv2(request.image)
         outputs = self.predictor( numpy_image )
@@ -100,6 +102,8 @@ class Detectron_ros (rclpy.node.Node):
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             image_msg_a = self.cv_bridge.cv2_to_imgmsg(img)
             self.visualization_pub.publish(image_msg_a)
+
+        self._logger.info(f"Processing image took {time.time()-start_time:.4f} seconds")
 
         return response
 
