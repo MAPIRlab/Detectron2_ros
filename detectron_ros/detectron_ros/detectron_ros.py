@@ -1,3 +1,4 @@
+import time
 import os
 import rclpy
 import rclpy.node
@@ -17,7 +18,7 @@ from vision_msgs.msg import Detection2D, BoundingBox2D, ObjectHypothesisWithPose
 import torch
 import numpy as np
 from cv_bridge import CvBridge
-
+import cv2
 '''
 Params:
 interest_classes: ([int]) list of COCO class indices that we want to output. Defaults to all
@@ -147,7 +148,6 @@ class Detectron_ros (rclpy.node.Node):
         numpy_image = self.cv_bridge.imgmsg_to_cv2(request.image)
         outputs = self.predictor( numpy_image )
         results = outputs["instances"].to("cpu")
-
         if results.has("pred_masks"):
             masks = np.asarray(results.pred_masks)
         else:
@@ -181,8 +181,11 @@ class Detectron_ros (rclpy.node.Node):
             visualizer = visualizer.draw_instance_predictions(results)
             img = visualizer.get_image()[:, :, ::-1]
 
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             image_msg_a = self.cv_bridge.cv2_to_imgmsg(img)
             self.visualization_pub.publish(image_msg_a)
+
+        self._logger.info(f"Processing image took {time.time()-start_time:.4f} seconds")
 
         return response
 
