@@ -32,18 +32,18 @@ class Detectron_ros (rclpy.node.Node):
 
     def __init__(self):
         super().__init__('Detectron_ros')
-        
+                
         # list of COCO class indices that we want to output. Defaults to all
-        self.interest_classes = self.get_parameter_or("interest_classes", [*range(80)])  
+        self.interest_classes = self.declare_parameter("interest_classes", [*range(80)]).value
         
-        self.publish_visualization = self.get_parameter_or("publish_visualization", True) 
-        visualization_topic = self.get_parameter_or("visualization_topic", "/detectron/segmentedImage")
+        self.publish_visualization = self.declare_parameter("publish_visualization", True).value
+        visualization_topic = self.declare_parameter("visualization_topic", "/detectron/segmentedImage").value
         self.visualization_pub = self.create_publisher(sensor_msgs.msg.Image, visualization_topic, 1)
 
         self.cv_bridge = CvBridge()
 
-        MODEL_FILE=self.get_parameter_or("model_file", "new_baselines/mask_rcnn_R_101_FPN_100ep_LSJ.py")
-        #MODEL_FILE=self.get_parameter_or("model_file", "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
+        MODEL_FILE=self.declare_parameter("model_file", "new_baselines/mask_rcnn_R_101_FPN_100ep_LSJ.py").value
+        #MODEL_FILE=self.declare_parameter("model_file", "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml").value
         _, model_extension = os.path.splitext(MODEL_FILE)
 
         if model_extension == ".py":
@@ -68,8 +68,10 @@ class Detectron_ros (rclpy.node.Node):
         self.cfg.model.backbone.norm = "BN"
         self.cfg.model.roi_heads.box_predictor.test_score_thresh = 0.3
 
+        device = self.declare_parameter("device_mode", "cuda").value
+        self._logger.info(f"Running detectron on {device}")
         self.predictor = detectron2.config.instantiate(self.cfg.model)
-        self.predictor = self.predictor.to("cuda")
+        self.predictor = self.predictor.to(device)
         
         detectron2.checkpoint.DetectionCheckpointer(self.predictor).load(detectron2.model_zoo.get_checkpoint_url(MODEL_FILE))
 
@@ -81,12 +83,16 @@ class Detectron_ros (rclpy.node.Node):
     def set_up_detectron_yaml(self, MODEL_FILE):
         self._logger.info(f"Detectron model file: {MODEL_FILE}")
         
+        device = self.declare_parameter("device_mode", "cuda").value
+        self._logger.info(f"Running detectron on {device}")
+
         self.cfg = detectron2.config.get_cfg()
         self.cfg.merge_from_file(detectron2.model_zoo.get_config_file(MODEL_FILE))
         self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set threshold for this model
         self.cfg.MODEL.WEIGHTS = detectron2.model_zoo.get_checkpoint_url(MODEL_FILE)
-        self.cfg.MODEL.DEVICE = self.get_parameter_or("device_mode", "cuda") 
+        self.cfg.MODEL.DEVICE = device
         self.predictor = detectron2.engine.DefaultPredictor(self.cfg)
+        
 
         self._class_names = np.array( detectron2.data.MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]).get("thing_classes", None) )
         
