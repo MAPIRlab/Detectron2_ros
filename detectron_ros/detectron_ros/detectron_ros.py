@@ -25,6 +25,7 @@ interest_classes: ([int]) list of COCO class indices that we want to output. Def
 visualization: (bool) whether to publish the segmented image on a topic
 visualization_topic: (str) pretty self-explanatory
 model_file: (str) path to the model yaml relative to detectron2/configs. You do not need to download the weights separately, detectron handles that itself
+device_mode (str): "cuda" (default) or "cpu"
 '''
 
 class Detectron_ros (rclpy.node.Node):
@@ -84,6 +85,7 @@ class Detectron_ros (rclpy.node.Node):
         self.cfg.merge_from_file(detectron2.model_zoo.get_config_file(MODEL_FILE))
         self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5  # set threshold for this model
         self.cfg.MODEL.WEIGHTS = detectron2.model_zoo.get_checkpoint_url(MODEL_FILE)
+        self.cfg.MODEL.DEVICE = self.get_parameter_or("device_mode", "cuda") 
         self.predictor = detectron2.engine.DefaultPredictor(self.cfg)
 
         self._class_names = np.array( detectron2.data.MetadataCatalog.get(self.cfg.DATASETS.TRAIN[0]).get("thing_classes", None) )
