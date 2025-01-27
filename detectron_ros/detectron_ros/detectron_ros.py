@@ -189,11 +189,9 @@ class Detectron_ros (rclpy.node.Node):
             visualizer = visualizer.draw_instance_predictions(results)
             img = visualizer.get_image()[:, :, ::-1]
 
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             image_msg_a = self.cv_bridge.cv2_to_imgmsg(img)
             self.visualization_pub.publish(image_msg_a)
 
-        self._logger.info(f"Processing image took {time.time()-start_time:.4f} seconds")
 
         return response
 
