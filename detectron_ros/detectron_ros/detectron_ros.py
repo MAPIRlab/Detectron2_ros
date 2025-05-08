@@ -225,10 +225,14 @@ class Detectron_ros (rclpy.node.Node):
 
         detection = Detection2D()
         detection.bbox = BoundingBox2D()
-        detection.bbox.center.position.x = float(bbox[0]) 
-        detection.bbox.center.position.y = float(bbox[1])
-        detection.bbox.size_x = float(bbox[2] - bbox[0])
-        detection.bbox.size_y = float(bbox[3] - bbox[1])
+
+        width = float(bbox[2]-bbox[0])
+        height = float(bbox[3]-bbox[1])
+
+        detection.bbox.center.position.x = float(bbox[0]) + width * 0.5 
+        detection.bbox.center.position.y = float(bbox[1]) + height * 0.5
+        detection.bbox.size_x = width
+        detection.bbox.size_y = height
         detection.results = []
 
         for i in range(scores):
