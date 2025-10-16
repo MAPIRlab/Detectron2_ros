@@ -37,7 +37,7 @@ class Detectron_ros (rclpy.node.Node):
         self.interest_classes = self.declare_parameter("interest_classes", [*range(80)]).value
         
         self.publish_visualization = self.declare_parameter("publish_visualization", True).value
-        visualization_topic = self.declare_parameter("visualization_topic", "/detectron/segmentedImage").value
+        visualization_topic = self.declare_parameter("visualization_topic", "/segmentedImage").value
         self.visualization_pub = self.create_publisher(sensor_msgs.msg.Image, visualization_topic, 1)
 
         self.cv_bridge = CvBridge()
