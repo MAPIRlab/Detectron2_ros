@@ -50,3 +50,16 @@ gnome-terminal -- bash -c "ros2 launch voxeland voxeland_server.launch.xml; exec
 # Open bag folder and play ros2 bag
 gnome-terminal -- bash -c "cd /home/ubuntu/ros2_ws/bag/ScanNet/to_ros/ROS2_bags/scene0000_01/; ros2 bag play scene0000_01.db3; exec bash"
 ```
+
+### Service Interface
+
+**Service:** `/yoloe/segment`  
+**Type:** `segmentation_msgs/srv/SegmentImage`
+
+**Request:**
+- `sensor_msgs/Image image` - Input RGB image
+
+**Response:**
+- `segmentation_msgs/SemanticInstance2D[] instances` - Detected objects with masks and bounding boxes
+
+**Visualization Topic:** `/segmentedImage` (if enabled)
