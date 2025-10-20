@@ -42,7 +42,7 @@ Create and execute a bash script that contains the following commands. Please ad
 cd ~/ros2_ws
 
 # Init voxeland_robot_perception with Detectron2 detector  
-gnome-terminal -- bash -c "source ~/.bashrc; source /home/ubuntu/ros2_ws/venvs/voxenv/bin/activate; ros2 launch voxeland_robot_perception semantic_mapping.launch.py object_detector:=detectron2; exec bash"
+gnome-terminal -- bash -c "source ~/.bashrc; source /home/ubuntu/ros2_ws/venvs/voxenv/bin/activate; ros2 launch voxeland_robot_perception semantic_mapping.launch.py object_detector:=detectron; exec bash"
 
 # Init voxeland server
 gnome-terminal -- bash -c "ros2 launch voxeland voxeland_server.launch.xml; exec bash"
