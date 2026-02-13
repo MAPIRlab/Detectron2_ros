@@ -42,18 +42,19 @@ class Detectron_ros (rclpy.node.Node):
 
         self.cv_bridge = CvBridge()
 
+        self.segment_image_srv =  self.create_service(SegmentImage, "/detectron/segment", self.segment_image)
+
         MODEL_FILE=self.declare_parameter("model_file", "new_baselines/mask_rcnn_R_101_FPN_100ep_LSJ.py").value
         #MODEL_FILE=self.declare_parameter("model_file", "COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml").value
-        _, model_extension = os.path.splitext(MODEL_FILE)
+        _, self.model_extension = os.path.splitext(MODEL_FILE)
 
-        if model_extension == ".py":
-            self.segment_image_srv =  self.create_service(SegmentImage, "/detectron/segment", self.segment_image_py)
+        if self.model_extension == ".py":
             self.set_up_detectron_py(MODEL_FILE)
-        elif model_extension == ".yaml":
-            self.segment_image_srv =  self.create_service(SegmentImage, "/detectron/segment", self.segment_image_yaml)
+        elif self.model_extension == ".yaml":
             self.set_up_detectron_yaml(MODEL_FILE)
         else:
             self._logger.info("MODEL_FILE not valid. It should be a .yaml or .py file.")
+            exit()
         
         self._logger.info("Done setting up!")
         self._logger.info(f"Advertising service: {self.segment_image_srv.srv_name}")
@@ -98,6 +99,16 @@ class Detectron_ros (rclpy.node.Node):
         
         interest_class_names = self._class_names[self.interest_classes]
         self._logger.info(f"Classes of interest: {interest_class_names}")
+
+    def segment_image(self, request, response):
+        start_time = time.time()
+        if self.model_extension == ".py":
+            self.segment_image_py(request, response)
+        elif self.model_extension == ".yaml":
+            self.segment_image_yaml(request, response)
+        # self._logger.info(f"Processed image in {1000. *(time.time()-start_time)}ms")
+
+        return response
 
     def segment_image_py(self, request, response):
         numpy_image = self.cv_bridge.imgmsg_to_cv2(request.image)
